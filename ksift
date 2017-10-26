@@ -98,7 +98,10 @@ if [ -z $MAXREADLENGTH ]; then
 fi
 
 if [ -z $OUTFASTA ]; then
-  2>&1 echo "must define output fasta"
+  >&2 echo ""
+  >&2 echo "ERROR:must define output fasta"
+  >&2 echo ""
+  usage
   exit 1
 fi
 
