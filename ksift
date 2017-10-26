@@ -153,8 +153,14 @@ done < <(
 >&2 echo "plotting self-alignments"
 tmpfile=$(tempfile)
 while IFS=$'\t' read -r name sequence; do
+  counts=$(echo -e "${name}\n${sequence}" | \
+  jellyfish count --disk -o /dev/stdout -L 2 --text -s $HASHSIZE -m $K /dev/stdin | \
+  tail -n+2 | sort -k2,2nr | tr '\n' ';')
+  
   echo -e "$name\n$sequence" > $tmpfile
-  yass -d 3 $tmpfile $tmpfile 2>/dev/null | awk -v sequence=$sequence -v seqname=$name '{print $0,seqname}' OFS='\t' | tail -n+2
+  
+  yass -d 3 $tmpfile $tmpfile 2>/dev/null | awk -v sequence=$sequence -v seqname=$name -v counts=$counts '{print $0,seqname,counts}' OFS='\t' | tail -n+2
+  
   rm $tmpfile
 done < <( cat $OUTFASTA | paste - - ) > ${OUTFASTA}.yass
 
