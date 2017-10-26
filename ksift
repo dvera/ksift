@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+
+usage() {
+  echo "Usage: $(basename $0) fasta ]" 1>&2
+  echo "" 1>&2
+  echo "" 1>&2
+  exit 1
+}
+
+################################
+### PARSE COMMAND LINE ARGS ####
+################################
+
+while getopts ":i:t:" opt; do
+  case $opt in
+  t)
+   NTHREADS=$OPTARG
+   ;;
+  a)
+   MAXAT=$OPTARG
+   ;;
+  k)
+   K=$OPTARG
+   ;;
+  m)
+   MINMEDIAN=$OPTARG
+   ;;
+  f)
+   FIRSTK=$OPTARG
+   ;;
+  s)
+   HASHSIZE=$OPTARG
+   ;;
+  l)
+   MINREADLENGTH=$OPTARG
+   ;;
+  x)
+   MAXREADLENGTH=$OPTARG
+   ;;
+  \?)
+   echo "Invalid option: -$OPTARG" >&2
+   usage
+   ;;
+  [?])
+   usage
+   ;;
+  :)
+   echo "Option -$OPTARG requires an argument." >&2
+   echo "" >&2
+   usage
+   ;;
+  esac
+done
+
+shift $((OPTIND-1))
+
+if [ -z $NTHREADS ]; then
+  NTHREADS=1
+fi
+
+if [ -z $HASHSIZE ]; then
+  HASHSIZE=100000
+fi
+
+if [ -z $MAXAT ]; then
+  MAXAT=0.7
+fi
+
+if [ -z $MINMEDIAN ]; then
+  MINMEDIAN=5
+fi
+
+if [[ -z $@ ]]; then
+  INPUT=$(cat /dev/stdin)
+else
+  INPUT=$@
+fi
+
+while IFS=$'\t' read -r name sequence; do
+  echo -e "${name}\n${sequence}" | \
+  jellyfish count --disk -o /dev/stdout -L 2 --text -s $HASHSIZE -m $K /dev/stdin | \
+  tail -n+2 | sort -k2,2nr | \
+  awk -v maxAT=$MAXAT -v topkmers=$FIRSTK -v filename=$name -v sequence=$sequence -v minmedian=$MINMEDIAN '{
+    a=gsub("A","A",$1);b=gsub("T","T",$1)
+    if((a+b)<maxAT){goodkmers+=1}
+    if(goodkmers==int(topkmers/2) && $2>=minmedian){
+      print filename"\n"sequence >> "test"; exit
+    }
+  }'
+done < <(
+  awk '{
+    if($1~">"){
+      print "~"$0"<"
+    }else{
+      print $0
+    }
+  }' ~/../../bass/AllPacBio5Knodust.fa | \
+  tr -d '\n' | \
+  tr '~' '\n' | \
+  tr '<' '\t' | \
+  awk '{if(length($2)>=1000){print $1,$2}}' OFS='\t'
+)
