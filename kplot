@@ -12,7 +12,7 @@ suppressMessages(library(docopt))       # we need docopt (>= 0.3) as on CRAN
 suppressMessages(library(parallel))       # we need docopt (>= 0.3) as on CRAN
 
 ## configuration for docopt
-doc <- "Usage: install.r [-h] [-t THREADS] sequences.fa
+doc <- "Usage: install.r [-h] [-t THREADS] sequences.fa.yass
 
 -t --threads THREADS
 -h --help                        show this help text"
