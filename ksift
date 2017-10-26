@@ -156,7 +156,7 @@ while IFS=$'\t' read -r name sequence; do
 
   counts=$(echo -e "${name}\n${sequence}" | \
   jellyfish count --disk -o /dev/stdout -L 2 --text -s $HASHSIZE -m $K /dev/stdin | \
-  tail -n+2 | sort -k2,2nr | tr '\n' ';')
+  tail -n+2 | sort -k2,2nr | tr '\n' ';' | tr ' ' '_')
   
   echo -e "$name\n$sequence" > $tmpfile
   
