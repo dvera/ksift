@@ -29,11 +29,14 @@ pdf(pdfName,width=10,height=10)
 
 for(x in 1:numseqs){
   now <- yass[[x]]
+  counts <- gsub("_"," ",unlist(strsplit(yass[[x]][1,11],";")))
   pmax <- max(now[,1:4])
   now[,7]=gsub("r","red",now[,7])
   now[,7]=gsub("f","blue",now[,7])
   plot(0,0,type='n',xlim=c(0,pmax),ylim=c(0,pmax),main=legendnames[x])
   segments(now[,1],now[,3],now[,2],now[,4],col=now[,7])
+  ty <- seq(0.95*pmax,0.05*pmax,length.out=27)
+  text(5,ty,labels=counts,col=rgb(0,0,0,25,maxColorValue=255))
   cat(".")
 }
 cat("\npdf saved to ",pdfName)
