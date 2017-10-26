@@ -1,0 +1,83 @@
+#!/usr/bin/env r
+#
+# A second example to install one or more packages, now with option parsing
+#
+# Copyright (C) 2011 - 2014  Dirk Eddelbuettel
+# Copyright (C) 2014 - 2015  Carl Boettiger and Dirk Eddelbuettel
+#
+# Released under GPL (>= 2)
+
+## load docopt package from CRAN
+suppressMessages(library(docopt))       # we need docopt (>= 0.3) as on CRAN
+suppressMessages(library(parallel))       # we need docopt (>= 0.3) as on CRAN
+
+## configuration for docopt
+doc <- "Usage: install.r [-h] [-t THREADS] sequences.fa
+
+-t --threads THREADS
+-h --help                        show this help text"
+
+opt <- docopt(doc)
+threads <- opt$threads
+
+removeext <- function( filenames ){
+	filenames<-as.character(filenames)
+	for(i in 1:length(filenames)){
+		namevector<-unlist(strsplit(filenames[i],"\\."))
+		filenames[i]<-paste(namevector[1:(length(namevector)-1)],collapse=".")
+	}
+	filenames
+}
+
+
+cmdRun <- function (cmdString, threads = 2L ){
+    numStrings <- length(cmdString)
+    if (numStrings < threads) {
+        threads <- numStrings
+    }
+
+		res <- mclapply(1:numStrings,function(i){
+    cmdString.call <- pipe(cmdString[i], open = "r")
+    result <- read.delim(cmdString.call, header = FALSE,
+      stringsAsFactors = FALSE, nrows = first)
+    close(cmdString.call)
+    return(result)
+
+        }, mc.cores = threads, mc.preschedule = FALSE)
+    return(res)
+}
+
+
+
+cat("looking for dump files\n")
+inputFiles <- system("find -type f -name '*.dump'",intern=T)
+numInputs <- length(inputFiles)
+cat("found ",numInputs,"dump files\n")
+
+cmdString <- paste0("awk -v maxAT=",maxAT," -v topkmers=",numkmer," -v filename=$i -v minmedian=",mmedian," '{a=gsub(\"A\",\"A\",$1);b=gsub(\"T\",\"T\",$1);if((a+b)<maxAT){goodkmers+=1};if(goodkmers==int(topkmers/2) && $2>=minmedian){print filename; exit}}' ",inputFiles,"; done")
+
+goodfiles <- cmdRun(cmdString,threads=threads)[[1]][,1]
+numgoods <- length(goodfiles)
+legendnames=basename(removeext(goodfiles))
+
+cat("found ",numgoods," sequences passing filter\n")
+
+cat("self-yassing sequences...\n")
+cmdString <- paste("yass -d 3",goodfiles,goodfiles,"2>/dev/null | tail -n+2")
+out <- cmdRun(cmdString,threads=threads)
+
+cat("generating dot plots")
+pdfName <- paste0("yass.pdf")
+pdf(pdfName,width=10,height=10)
+
+out <- lapply(1:numgoods, function(x){
+  now <- out[[x]]
+  pmax <- max(now[,1:4])
+  now[,7]=gsub("r","red",now[,7])
+  now[,7]=gsub("f","blue",now[,7])
+  plot(0,0,type='n',xlim=c(0,pmax),ylim=c(0,pmax),main=legendnames[x])
+  segments(now[,1],now[,3],now[,2],now[,4],col=now[,7])
+  cat(".")
+})
+dev.off()
+
