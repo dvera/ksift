@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 usage() {
-  echo "Usage: $(basename $0) fasta ]" 1>&2
+  echo "Usage: $(basename $0) sequences.fa" 1>&2
   echo "" 1>&2
   echo "" 1>&2
   exit 1
@@ -11,7 +11,7 @@ usage() {
 ### PARSE COMMAND LINE ARGS ####
 ################################
 
-while getopts ":i:t:" opt; do
+while getopts ":i:takmfslx" opt; do
   case $opt in
   t)
    NTHREADS=$OPTARG
@@ -58,17 +58,34 @@ if [ -z $NTHREADS ]; then
   NTHREADS=1
 fi
 
-if [ -z $HASHSIZE ]; then
-  HASHSIZE=100000
-fi
-
 if [ -z $MAXAT ]; then
   MAXAT=0.7
+fi
+
+if [ -z $K ]; then
+  K=10
 fi
 
 if [ -z $MINMEDIAN ]; then
   MINMEDIAN=5
 fi
+
+if [ -z $FIRSTK ]; then
+  FIRSTK=10
+fi
+
+if [ -z $HASHSIZE ]; then
+  HASHSIZE=100000
+fi
+
+if [ -z $MINREADLENGTH ]; then
+  MINREADLENGTH=1000
+fi
+
+if [ -z $MAXREADLENGTH ]; then
+  MAXREADLENGTH=1000000
+fi
+
 
 if [[ -z $@ ]]; then
   INPUT=$(cat /dev/stdin)
@@ -76,27 +93,37 @@ else
   INPUT=$@
 fi
 
+# check if jellyfish2 is in $PATH
+jellyfish --version 2>/dev/null | grep "jellyfish 2" > /dev/null
+LAC=$?
+if [ $LAC -gt 0 ]; then
+  2>&1 echo "jellyfish 2 not found in $PATH"
+  exit 1
+fi
+
 while IFS=$'\t' read -r name sequence; do
   echo -e "${name}\n${sequence}" | \
   jellyfish count --disk -o /dev/stdout -L 2 --text -s $HASHSIZE -m $K /dev/stdin | \
   tail -n+2 | sort -k2,2nr | \
-  awk -v maxAT=$MAXAT -v topkmers=$FIRSTK -v filename=$name -v sequence=$sequence -v minmedian=$MINMEDIAN '{
+  awk IFS=$'\t' -v k=$K -v maxAT=$MAXAT -v topkmers=$FIRSTK -v filename=$name -v sequence=$sequence -v minmedian=$MINMEDIAN '{
     a=gsub("A","A",$1);b=gsub("T","T",$1)
-    if((a+b)<maxAT){goodkmers+=1}
+    if(((a+b)/k) < maxAT){
+      goodkmers+=1
+    }
     if(goodkmers==int(topkmers/2) && $2>=minmedian){
-      print filename"\n"sequence >> "test"; exit
+      print filename"\n"sequence; exit
     }
   }'
 done < <(
-  awk '{
+  awk IFS=$'\t' '{
     if($1~">"){
       print "~"$0"<"
     }else{
       print $0
     }
-  }' ~/../../bass/AllPacBio5Knodust.fa | \
+  }' $INPUT | \
   tr -d '\n' | \
   tr '~' '\n' | \
   tr '<' '\t' | \
-  awk '{if(length($2)>=1000){print $1,$2}}' OFS='\t'
+  awk IFS=$'\t' -v minl=$MINREADLENGTH -v maxl=$MAXREADLENGTH '{l=length($2);if(l>=minl && l<=maxl){print $1,$2}}' OFS='\t'
 )
