@@ -11,7 +11,7 @@ usage() {
 ### PARSE COMMAND LINE ARGS ####
 ################################
 
-while getopts ":i:takmfslx" opt; do
+while getopts ":i:t:a:k:m:f:s:l:x:p:o:" opt; do
   case $opt in
   t)
    NTHREADS=$OPTARG
@@ -36,6 +36,12 @@ while getopts ":i:takmfslx" opt; do
    ;;
   x)
    MAXREADLENGTH=$OPTARG
+   ;;
+  p)
+   OUTPDF=$OPTARG
+   ;;
+  o)
+   OUTFASTA=$OPTARG
    ;;
   \?)
    echo "Invalid option: -$OPTARG" >&2
@@ -86,6 +92,10 @@ if [ -z $MAXREADLENGTH ]; then
   MAXREADLENGTH=1000000
 fi
 
+if [ -z $OUTFASTA ]; then
+  2>&1 echo "must define output fasta"
+  exit 1
+fi
 
 if [[ -z $@ ]]; then
   INPUT=$(cat /dev/stdin)
@@ -101,11 +111,21 @@ if [ $LAC -gt 0 ]; then
   exit 1
 fi
 
+# check if jellyfish2 is in $PATH
+yass --version 2>&1 | grep "version 1" > /dev/null
+LAC=$?
+if [ $LAC -gt 0 ]; then
+  2>&1 echo "yass not found in $PATH"
+  exit 1
+fi
+
+>&2 echo "filtering sequences into $OUTFASTA"
+
 while IFS=$'\t' read -r name sequence; do
   echo -e "${name}\n${sequence}" | \
   jellyfish count --disk -o /dev/stdout -L 2 --text -s $HASHSIZE -m $K /dev/stdin | \
   tail -n+2 | sort -k2,2nr | \
-  awk IFS=$'\t' -v k=$K -v maxAT=$MAXAT -v topkmers=$FIRSTK -v filename=$name -v sequence=$sequence -v minmedian=$MINMEDIAN '{
+  awk -v k=$K -v maxAT=$MAXAT -v topkmers=$FIRSTK -v filename=$name -v sequence=$sequence -v minmedian=$MINMEDIAN '{
     a=gsub("A","A",$1);b=gsub("T","T",$1)
     if(((a+b)/k) < maxAT){
       goodkmers+=1
@@ -113,9 +133,11 @@ while IFS=$'\t' read -r name sequence; do
     if(goodkmers==int(topkmers/2) && $2>=minmedian){
       print filename"\n"sequence; exit
     }
-  }'
+  }' &
+
+  [ $( jobs | wc -l ) -ge $NTHREADS ] && wait
 done < <(
-  awk IFS=$'\t' '{
+  awk '{
     if($1~">"){
       print "~"$0"<"
     }else{
@@ -125,5 +147,14 @@ done < <(
   tr -d '\n' | \
   tr '~' '\n' | \
   tr '<' '\t' | \
-  awk IFS=$'\t' -v minl=$MINREADLENGTH -v maxl=$MAXREADLENGTH '{l=length($2);if(l>=minl && l<=maxl){print $1,$2}}' OFS='\t'
-)
+  awk -v minl=$MINREADLENGTH -v maxl=$MAXREADLENGTH '{l=length($2);if(l>=minl && l<=maxl){print $1,$2}}' OFS='\t'
+) > $OUTFASTA
+
+>&2 echo "plotting self-alignments"
+tmpfile=$(tempfile)
+while IFS=$'\t' read -r name sequence; do
+  echo -e "$name\n$sequence" > $tmpfile
+  yass -d 3 $tmpfile $tmpfile 2>/dev/null | awk -v sequence=$sequence -v seqname=$name '{print $0,seqname}' OFS='\t' | tail -n+2
+  rm $tmpfile
+done < <( cat $OUTFASTA | paste - - ) > ${OUTFASTA}.yass
+
