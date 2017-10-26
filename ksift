@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
 
 usage() {
-  echo "Usage: $(basename $0) sequences.fa" 1>&2
-  echo "" 1>&2
+  >&2 echo "Usage: $(basename $0) -o out.fa sequences.fa"
+  >&2 echo ""
+  >&2 echo "-o outputFasta    name of output fasta file to put filtered sequences"
+  >&2 echo "-t numthreads     number of CPU threads to use, default: 1"
+  >&2 echo "-a maxAT          maximum proportion of ATs allowed in a kmer for use in calculating median kmer abundance, default: 0.7"
+  >&2 echo "-k klength        length of k(mer) to use, default: 10"
+  >&2 echo "-m minMedian      minimum median of top firstK kmer abundances to keep a sequence, default: 5"
+  >&2 echo "-s hashSize       jellyfish hash size, default: 100000"
+  >&2 echo "-l minLength      minimum length of sequence to consider, default: 1000"
+  >&2 echo "-x maxLength      maximum length of sequence to consider, default: 1000000"
   echo "" 1>&2
   exit 1
 }
@@ -11,7 +19,7 @@ usage() {
 ### PARSE COMMAND LINE ARGS ####
 ################################
 
-while getopts ":i:t:a:k:m:f:s:l:x:p:o:" opt; do
+while getopts ":i:t:a:k:m:f:s:l:x:o:" opt; do
   case $opt in
   t)
    NTHREADS=$OPTARG
@@ -36,9 +44,6 @@ while getopts ":i:t:a:k:m:f:s:l:x:p:o:" opt; do
    ;;
   x)
    MAXREADLENGTH=$OPTARG
-   ;;
-  p)
-   OUTPDF=$OPTARG
    ;;
   o)
    OUTFASTA=$OPTARG
