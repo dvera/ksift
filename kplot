@@ -1,24 +1,21 @@
 #!/usr/bin/env r
 #
-# A second example to install one or more packages, now with option parsing
-#
-# Copyright (C) 2011 - 2014  Dirk Eddelbuettel
-# Copyright (C) 2014 - 2015  Carl Boettiger and Dirk Eddelbuettel
+# Plot the output of ksift-generated yass self-alignments
 #
 # Released under GPL (>= 2)
 
 ## load docopt package from CRAN
 suppressMessages(library(docopt))       # we need docopt (>= 0.3) as on CRAN
 suppressMessages(library(parallel))       # we need docopt (>= 0.3) as on CRAN
+suppressMessages(library(readr))       # we need docopt (>= 0.3) as on CRAN
 
 ## configuration for docopt
-doc <- "Usage: install.r [-h] [-t THREADS] sequences.fa.yass
+doc <- "Usage: install.r [-h] siftOutput
 
--t --threads THREADS
--h --help                        show this help text"
+-h --help          show this help text"
 
 opt <- docopt(doc)
-threads <- opt$threads
+yassFile <- opt$siftOutput
 
 removeext <- function( filenames ){
 	filenames<-as.character(filenames)
@@ -29,36 +26,9 @@ removeext <- function( filenames ){
 	filenames
 }
 
-
-cmdRun <- function (cmdString, threads = 2L ){
-    numStrings <- length(cmdString)
-    if (numStrings < threads) {
-        threads <- numStrings
-    }
-
-		res <- mclapply(1:numStrings,function(i){
-    cmdString.call <- pipe(cmdString[i], open = "r")
-    result <- read.delim(cmdString.call, header = FALSE,
-      stringsAsFactors = FALSE, nrows = first)
-    close(cmdString.call)
-    return(result)
-
-        }, mc.cores = threads, mc.preschedule = FALSE)
-    return(res)
-}
-
-
-
-cat("looking for dump files\n")
-inputFiles <- system("find -type f -name '*.dump'",intern=T)
-numInputs <- length(inputFiles)
-cat("found ",numInputs,"dump files\n")
-
-cmdString <- paste0("awk -v maxAT=",maxAT," -v topkmers=",numkmer," -v filename=$i -v minmedian=",mmedian," '{a=gsub(\"A\",\"A\",$1);b=gsub(\"T\",\"T\",$1);if((a+b)<maxAT){goodkmers+=1};if(goodkmers==int(topkmers/2) && $2>=minmedian){print filename; exit}}' ",inputFiles,"; done")
-
-goodfiles <- cmdRun(cmdString,threads=threads)[[1]][,1]
-numgoods <- length(goodfiles)
-legendnames=basename(removeext(goodfiles))
+yass <- as.data.frame(read_tsv(yassFile))
+yass <- split(yass,yass[,10])
+legendnames=names(yass)
 
 cat("found ",numgoods," sequences passing filter\n")
 
