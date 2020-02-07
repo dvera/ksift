@@ -35,6 +35,7 @@ Rscript -e 'install.packages("docopt", repos="https://cran.rstudio.com")'
 Rscript -e 'install.packages("readr", repos="https://cran.rstudio.com")'
 ```
 
+install ksift
 ```bash
 # install ksift
 wget https://github.com/dvera/ksift/archive/master.zip && \
@@ -42,11 +43,6 @@ unzip master.zip && \
 cp ksift-master/k* /usr/local/bin/
 ```
 
-
-```bash
-wget https://github.com/dvera/ksift/archive/master.zip && \
-unzip master.zip
-```
 
 ## usage
 ```
