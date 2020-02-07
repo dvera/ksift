@@ -7,8 +7,45 @@
 - R and packages docopt, readr
 
 ## installation
+install dependencies (tested on ubuntu xenial)
 ```bash
-wget https://github.com/dvera/ksift/archive/master.zip && unzip master.zip
+
+# install R and littler
+apt-get install -y r-base r-cran-littler
+
+# install yass
+wget -O- https://github.com/laurentnoe/yass/archive/1.15_alpha_9.tar.gz | \
+tar zx && \
+cd yass-1.15_alpha_9 && \
+./configure --with-threads && \
+make && \
+make install && \
+cd /root && \
+rm -fr yass-1.15_alpha_9
+
+# install jellyfish
+wget https://github.com/gmarcais/Jellyfish/releases/download/v2.3.0/jellyfish-linux && \
+chmod +x jellyfish-linux && \
+cp jellyfish-linux /usr/local/bin/jellyfish
+
+# install docopt
+Rscript -e 'install.packages("docopt", repos="https://cran.rstudio.com")'
+
+# install readr
+Rscript -e 'install.packages("readr", repos="https://cran.rstudio.com")'
+```
+
+```bash
+# install ksift
+wget https://github.com/dvera/ksift/archive/master.zip && \
+unzip master.zip && \
+cp ksift-master/k* /usr/local/bin/
+```
+
+
+```bash
+wget https://github.com/dvera/ksift/archive/master.zip && \
+unzip master.zip
 ```
 
 ## usage
