@@ -65,7 +65,7 @@ ksift -o output.fa input.fa
 
 usage (docker)
 ```bash
-docker run -u $USR -v $PWD:$PWD -w $PWD vera/ksift -o output.fa input.fa
+docker run -v $PWD:$PWD -w $PWD vera/ksift -o output.fa input.fa
 ```
 
 
