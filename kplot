@@ -31,6 +31,8 @@ for(x in 1:numseqs){
   now <- yass[[x]]
   counts <- gsub("_"," ",unlist(strsplit(yass[[x]][1,11],";")))
   pmax <- max(now[,1:4])
+  now[,7]=as.character(now[,7])
+  now[,7]=gsub("FALSE","f",now[,7])
   now[,7]=gsub("r","red",now[,7])
   now[,7]=gsub("f","blue",now[,7])
   par(mar=c(5,5,10,10),xpd=F)
